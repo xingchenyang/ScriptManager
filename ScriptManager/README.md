@@ -1,6 +1,6 @@
 # scriptmanager
 
-USAGE: ScriptManager.exe /csName NomDeLaChaineDeConnection [/sqlPath pathToSqlDirectory] [/envCode forcedEnvCode] [/csFile pathToConfFile] [/disableScriptDiff 1] [/version versionString]
+USAGE: ScriptManager.exe /csName connectionStringName [/sqlPath pathToSqlDirectory] [/envCode forcedEnvCode] [/csFile pathToConfFile] [/disableScriptDiff 1] [/version versionString]
 ex: ScriptManager.exe /csName "MyCsName" /sqlPath "../../SQL/" /envCode "RCT" /csFile "../../Database.Config" /version "3.1.0#85"
 PARAMETERS:
  - sqlPath: path of scripts folder (default is ./SQL)

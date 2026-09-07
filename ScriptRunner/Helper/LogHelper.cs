@@ -23,7 +23,7 @@ namespace ScriptRunner.Helper
 
         #region debug
         /// <summary>
-        /// Ajoute un log de debug
+        /// Write a debug log entry.
         /// </summary>
         /// <param name="exp">The Exception </param>
         public static void LogDebug(this Exception exp)
@@ -32,7 +32,7 @@ namespace ScriptRunner.Helper
                 Logger.Debug(exp.GetLog());
         }
         /// <summary>
-        /// Ajoute un log de debug
+        /// Write a debug log entry.
         /// </summary>
         public static void LogDebug(string message)
         {
@@ -42,7 +42,7 @@ namespace ScriptRunner.Helper
 
         #region info
         /// <summary>
-        /// Ajoute un log d'information
+        /// Write an informational log entry.
         /// </summary>
         /// <param name="exp">The Exception </param>
         public static void LogInfo(this Exception exp)
@@ -66,7 +66,7 @@ namespace ScriptRunner.Helper
         }
 
         /// <summary>
-        /// Ajoute un log d'information
+        /// Write an informational log entry.
         /// </summary>
         public static void LogInfo(string message)
         {
@@ -76,7 +76,7 @@ namespace ScriptRunner.Helper
 
         #region warn
         /// <summary>
-        /// Ajoute un log de warning
+        /// Write a warning log entry.
         /// </summary>
         /// <param name="exp">The Exception </param>
         public static void LogWarn(this Exception exp)
@@ -85,7 +85,7 @@ namespace ScriptRunner.Helper
                 Logger.Warn(exp.GetLog());
         }
         /// <summary>
-        /// Ajoute un log de warning
+        /// Write a warning log entry.
         /// </summary>
         public static void LogWarn(string message)
         {
@@ -95,7 +95,7 @@ namespace ScriptRunner.Helper
 
         #region error & fatal
         /// <summary>
-        /// Ajoute un log d'erreur
+        /// Write an error log entry.
         /// </summary>
         /// <param name="exp">The Exception </param>
         public static void LogError(this Exception exp)
@@ -104,7 +104,7 @@ namespace ScriptRunner.Helper
                 Logger.Error(exp.GetLog());
         }
         /// <summary>
-        /// Ajoute un log d'erreur
+        /// Write an error log entry.
         /// </summary>
         public static void LogError(string message)
         {
@@ -112,7 +112,7 @@ namespace ScriptRunner.Helper
         }
 
         /// <summary>
-        /// Ajoute un log d'erreur fatale
+        /// Write a fatal error log entry.
         /// </summary>
         /// <param name="exp">The Exception </param>
         public static void LogFatal(this Exception exp)
@@ -121,7 +121,7 @@ namespace ScriptRunner.Helper
                 Logger.Fatal(exp.GetLog());
         }
         /// <summary>
-        /// Ajoute un log d'erreur fatale
+        /// Write a fatal error log entry.
         /// </summary>
         public static void LogFatal(string message)
         {

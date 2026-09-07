@@ -8,11 +8,11 @@ namespace ScriptRunner
         /// <summary>
         /// Read content of file, utf8 only
         /// </summary>
-        /// <param name="fichier"></param>
+        /// <param name="fichier">Path of the file to read.</param>
         /// <returns></returns>
         public static string GetFileContent(string fichier)
         {
-            // on lit le fichier utf8
+            // Read the file as UTF-8.
             FileInfo file = new FileInfo(fichier);
             return file.OpenText().ReadToEnd();
         }

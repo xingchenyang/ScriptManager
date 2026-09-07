@@ -19,11 +19,11 @@ namespace ScriptRunner
 
         internal void RunScripts()
         {
-            // récupération chaine de connection
+            // Resolve the connection string.
             string connectionString = null;
             if (!string.IsNullOrEmpty(CsFile))
             {
-                // recuperation connectionString depuis le fichier 
+                // Read the named connection string from the supplied file.
                 var doc = XDocument.Load(CsFile);
                 foreach (var el in doc.Root.Elements())
                 {
@@ -106,7 +106,7 @@ namespace ScriptRunner
                             nbScript++;
                             var command = new SqlCommand(script, connection)
                             {
-                                CommandTimeout = 172800 // 48 heures
+                                CommandTimeout = 172800 // 48 hours
                             };
                             command.ExecuteNonQuery();
                         }

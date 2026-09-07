@@ -10,7 +10,7 @@ namespace ScriptRunner
         {
             try
             {
-                #region initialisation cong & verif parametres
+                #region configuration initialization and parameter validation
 
                 // Initialize log4net.
                 log4net.Config.XmlConfigurator.Configure();
@@ -87,7 +87,7 @@ namespace ScriptRunner
         private static void PrintUsage()
         {
             LogHelper.LogAndInfo("USAGE: ScriptRunner.exe "+ 
-                                 "[/cs ChaineDeConnection] [/csName NomDeLaChaineDeConnection] [/csFile pathToConfFile] " + 
+                                 "[/cs connectionString] [/csName connectionStringName] [/csFile pathToConfFile] " +
                                  "[/sqlPath pathToSqlDirectory] [[/sql sqlFile] [/sqlOutput outputFile]] " + 
                                  "[/verbose 1/0]");
             LogHelper.LogAndInfo("ex: ScriptManager.exe /csName NameOfCS /sqlPath \"../../../../SQL/\" /csFile \"../../Config/VS/Database.Config\" ");

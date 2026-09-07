@@ -10,7 +10,7 @@ namespace ScriptManager
         {
             get
             {
-                // récupération nom environnement en cours
+                // Read the current environment name.
                 if (envName == null)
                 {
                     envName = ConfigurationManager.AppSettings["EnvironmentName"];
@@ -42,7 +42,7 @@ namespace ScriptManager
         public const string EnvDelimiterInFile = "=";
 
         /// <summary>
-        /// Séparateur dans 
+        /// Separator used between environment-name segments.
         /// </summary>
         public const string EnvSubNameSeparator = "-";
     }

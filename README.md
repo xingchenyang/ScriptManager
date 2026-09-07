@@ -1,7 +1,7 @@
 # scriptmanager
 script manager is a tool that allows differential script execution on a sql server database
 
-USAGE: ScriptManager.exe /csName NomDeLaChaineDeConnection [/sqlPath pathToSqlDirectory] [/envCode forcedEnvCode] [/csFile pathToConfFile] [/disableScriptDiff 1] [/version versionString]
+USAGE: ScriptManager.exe /csName connectionStringName [/sqlPath pathToSqlDirectory] [/envCode forcedEnvCode] [/csFile pathToConfFile] [/disableScriptDiff 1] [/version versionString]
 ex: ScriptManager.exe /csName "MyCsName" /sqlPath "../../SQL/" /envCode "RCT" /csFile "../../Database.Config" /version "3.1.0#85"
 PARAMETERS:
  - sqlPath: path of scripts folder (default is ./SQL)
@@ -13,7 +13,6 @@ PARAMETERS:
 
 TODO 
  - write a better readme
- - finish changing texts & comments from french to english!
  - make some sample
 
  

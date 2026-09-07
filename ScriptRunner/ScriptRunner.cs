@@ -22,14 +22,14 @@ namespace ScriptRunner
 
         internal void RunScripts()
         {
-            // récupération chaine de connection
+            // Resolve the connection string.
             string connectionString = ConnectionStringValue;
 
             if (string.IsNullOrEmpty(connectionString))
             {
                 if (!string.IsNullOrEmpty(CsFile))
                 {
-                    // recuperation connectionString depuis le fichier 
+                    // Read the named connection string from the supplied file.
                     var doc = XDocument.Load(CsFile);
                     foreach (var el in doc.Root.Elements())
                     {

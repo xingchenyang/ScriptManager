@@ -9,18 +9,17 @@ namespace ScriptRunner
     {
 
         /// <summary>
-        /// chargement des fichiers dans l'ordre suivant
-        /// 1) dans /SQL
-        /// 2) dnas les sous répertoires de /SQL 
+        /// Load files in the following order:
+        /// 1) files directly inside /SQL;
+        /// 2) files inside subdirectories of /SQL.
         /// </summary>
         public static List<string> FindFilesInDirectory(string directory)
         {
             List<string> res = new List<string>();
             string[] fichiers = Directory.GetFiles(directory);
             if (fichiers.Any())
-                // on ajoute les fichiers ordonnés par numéro de script
-                // dnas le cas ou les fichiers sont nommés de cette façon 002-CML-insertions varables pour paymen referentiels.configurations et referentiels.parametres
-                // si on n'arrive pas à parser le numero, on le met à la fin
+                // Add SQL files in path order. Numeric prefixes such as 002- can control the sequence.
+                // Files without a numeric prefix naturally sort according to their full path.
                 res.AddRange(OrdonneFichiersDossiers(fichiers.Where(x => x.ToLower().EndsWith(".sql"))));
 
             string[] repertoires = Directory.GetDirectories(directory);

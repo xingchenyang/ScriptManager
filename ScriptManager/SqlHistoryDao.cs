@@ -28,7 +28,7 @@ namespace ScriptManager
             {
                 if (ex is SqlException)
                 {
-                    // on créé la table si elle n'existe pas
+                    // Create the table when it does not exist.
                     LogHelper.LogAndInfo("WARNING : table " + LogTableName + " does not exists and will be created");
                     try
                     {
@@ -82,7 +82,7 @@ namespace ScriptManager
 
         public static void InsertLog(string fichier, string messageErreur, string connectionString)
         {
-            // insertion dans la table de logs de scripts 
+            // Insert the execution result into the script log table.
             using (var conn = new SqlConnection(connectionString))
             {
                 conn.Open();
