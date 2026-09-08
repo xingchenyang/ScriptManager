@@ -18,37 +18,47 @@ namespace ScriptManager
                 var options = new RunnerOptions { SqlPath = DefaultSqlPath };
                 for (int i = 0; i < args.Length; i += 2)
                 {
-                    switch (args[i].ToLowerInvariant())
+                    switch (args[i])
                     {
-                        case "/csname": options.ConnectionStringName = args[i + 1]; break;
-                        case "/sqlpath": options.SqlPath = args[i + 1]; break;
-                        case "/envcode": options.EnvironmentName = args[i + 1]; break;
-                        case "/csfile": options.ConnectionStringFile = args[i + 1]; break;
-                        case "/disablescriptdiff": options.DisableScriptDiff = args[i + 1] == "1"; break;
+                        case "/csName": options.ConnectionStringName = args[i + 1]; break;
+                        case "/sqlPath": options.SqlPath = args[i + 1]; break;
+                        case "/envCode": options.EnvironmentName = args[i + 1]; break;
+                        case "/csFile": options.ConnectionStringFile = args[i + 1]; break;
+                        case "/disableScriptDiff": options.DisableScriptDiff = args[i + 1] == "1"; break;
                         case "/version": options.Version = args[i + 1]; break;
-                        default:
-                            Console.Error.WriteLine("Unknown parameter: " + args[i]);
-                            return PrintUsage();
                     }
                 }
 
-                if (string.IsNullOrWhiteSpace(options.ConnectionStringName) ||
-                    string.IsNullOrWhiteSpace(options.SqlPath))
+                if (string.IsNullOrEmpty(options.ConnectionStringName) ||
+                    string.IsNullOrEmpty(options.SqlPath))
                     return PrintUsage();
+
+                if (!ConfirmLaunch())
+                {
+                    Console.WriteLine("Lancement annule.");
+                    return 3;
+                }
 
                 return new ScriptManager(options).Run();
             }
             catch (Exception ex)
             {
                 Log.Error("Unhandled error", ex);
-                return 1;
+                return 0;
             }
         }
 
         private static int PrintUsage()
         {
             Console.WriteLine("USAGE: ScriptManager.exe /csName name [/sqlPath path] [/envCode code] [/csFile file] [/disableScriptDiff 1] [/version value]");
-            return 2;
+            return 0;
+        }
+
+        private static bool ConfirmLaunch()
+        {
+            Console.Write("Saisissez O pour confirmer le lancement : ");
+            string confirmation = Console.ReadLine();
+            return string.Equals(confirmation?.Trim(), "O", StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -74,8 +84,27 @@ namespace ScriptManager
 
         internal static void Error(string message, Exception exception)
         {
-            Logger.Error(message, exception);
-            Console.Error.WriteLine(message + ": " + exception.Message);
+            string output = message + " " + FormatException(exception);
+            Logger.Error(output);
+            Console.Error.WriteLine(output);
+        }
+
+        internal static string FormatException(Exception exception)
+        {
+            var output = new System.Text.StringBuilder();
+            while (exception != null)
+            {
+                output.AppendLine("Server: " + Environment.MachineName);
+                output.AppendLine("ExceptionType: " + exception.GetType());
+                output.AppendLine("Message: " + exception.Message);
+                output.AppendLine("Source: " + exception.Source);
+                output.AppendLine("Target site: " + Convert.ToString(exception.TargetSite));
+                output.AppendLine(exception.StackTrace);
+                exception = exception.InnerException;
+                if (exception != null)
+                    output.Append("Nested Exception----");
+            }
+            return output.ToString();
         }
     }
 }

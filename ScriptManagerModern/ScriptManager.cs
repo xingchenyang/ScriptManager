@@ -23,7 +23,12 @@ namespace ScriptManager
 
         internal int Run()
         {
+            Log.Info(string.Empty);
+            Log.Info(string.Empty);
+            Log.Info("---------------------------------------------------");
             string connectionString = ResolveConnectionString();
+            Log.Info("Using the following connection string: ");
+            Log.Info(connectionString);
             if (!Directory.Exists(options.SqlPath))
                 throw new DirectoryNotFoundException(options.SqlPath);
 
@@ -61,7 +66,7 @@ namespace ScriptManager
                 catch (Exception ex)
                 {
                     errors++;
-                    error = ex.ToString();
+                    error = Log.FormatException(ex);
                     Log.Error("ERROR running script " + file, ex);
                 }
 
@@ -69,20 +74,31 @@ namespace ScriptManager
                     InsertHistory(connectionString, HistoryPath(file), error);
             }
 
-            Log.Info(string.Format("FINISHED: {0} scripts run, {1} errors", files.Count, errors));
+            Log.Info(string.Format(
+                "FINISHED : {0} scripts run, {1} success and {2} errors",
+                files.Count,
+                files.Count - errors,
+                errors));
 
-            if (errors == 0 && !string.IsNullOrWhiteSpace(options.Version))
-                UpdateVersion(connectionString, options.Version);
-            else if (errors > 0 && !string.IsNullOrWhiteSpace(options.Version))
-                Log.Info("Database version was not updated because one or more scripts failed.");
+            if (!string.IsNullOrEmpty(options.Version))
+            {
+                try
+                {
+                    UpdateVersion(connectionString, options.Version);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("ERROR updating version number information:", ex);
+                }
+            }
 
-            return errors == 0 ? 0 : 1;
+            return 0;
         }
 
         private string ResolveConnectionString()
         {
             string value = null;
-            if (!string.IsNullOrWhiteSpace(options.ConnectionStringFile))
+            if (!string.IsNullOrEmpty(options.ConnectionStringFile))
             {
                 var document = XDocument.Load(options.ConnectionStringFile);
                 var element = document.Root.Elements("add")
@@ -116,12 +132,23 @@ namespace ScriptManager
             if (!file.Contains("="))
                 return true;
             var match = Regex.Match(Path.GetFileName(file), "=(.*)=");
-            if (!match.Success)
-                return true;
-            string environment = options.EnvironmentName ?? ConfigurationManager.AppSettings["EnvironmentName"] ?? string.Empty;
+            string environment = NormalizeEnvironmentName(
+                options.EnvironmentName ?? ConfigurationManager.AppSettings["EnvironmentName"] ?? string.Empty);
             string fileEnvironment = match.Groups[1].Value;
-            return environment.Equals(fileEnvironment, StringComparison.OrdinalIgnoreCase) ||
-                   environment.StartsWith(fileEnvironment + "-", StringComparison.OrdinalIgnoreCase);
+            return environment == fileEnvironment || environment.StartsWith(fileEnvironment + "-");
+        }
+
+        private static string NormalizeEnvironmentName(string environment)
+        {
+            return environment
+                .Replace("/", "-")
+                .Replace("\\", "-")
+                .Replace("?", "-")
+                .Replace(":", "-")
+                .Replace("*", "-")
+                .Replace("\"", "-")
+                .Replace("<", "-")
+                .Replace(">", "-");
         }
 
         private string HistoryPath(string file)
@@ -263,10 +290,10 @@ CREATE TABLE dbo.HistoriqueScriptSql(DateExecution DATETIME2, NomScript VARCHAR(
 
         private static HashSet<string> ReadHistory(string connectionString)
         {
-            var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var result = new HashSet<string>(StringComparer.Ordinal);
             using (var connection = new SqlConnection(connectionString))
             using (var command = new SqlCommand(
-                "SELECT NomScript FROM " + HistoryTable + " WHERE NULLIF(MessageErreur, '') IS NULL",
+                "SELECT NomScript FROM " + HistoryTable,
                 connection))
             {
                 connection.Open();
@@ -295,7 +322,7 @@ ELSE
     EXEC sys.sp_updateextendedproperty @name=N'Version', @value=@Version;";
             Execute(connectionString, sql, command =>
                 command.Parameters.Add("@Version", SqlDbType.VarChar, 100).Value = version);
-            Log.Info("Database version has been set to " + version);
+            Log.Info("Version number has been set to " + version);
         }
 
         private static void Execute(string connectionString, string sql, Action<SqlCommand> configure)

@@ -121,6 +121,26 @@ The table is created automatically when it does not exist. It stores the executi
 path and any execution error. Before running the selected files, ScriptManager reads this table
 and skips paths that have already been recorded.
 
+The table can also be created manually with the following SQL Server definition:
+
+```sql
+CREATE TABLE [dbo].[HistoriqueScriptSql]
+(
+    [DateExecution] [datetime2](7) NULL,
+    [NomScript] [varchar](500) NULL,
+    [MessageErreur] [varchar](max) NULL
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+```
+
+- `DateExecution` contains the date and time of the execution attempt.
+- `NomScript` contains the script path used by differential execution, normally beginning with
+  `SQL/`.
+- `MessageErreur` is empty after a successful execution and contains the complete error details
+  after a failure.
+- `TEXTIMAGE_ON [PRIMARY]` stores the out-of-row data associated with the `varchar(max)` error
+  column in the primary filegroup.
+
 Execution attempts are recorded even when the SQL script fails. Consequently, a failed script is
 also considered previously executed on the next run. Review or remove its history row before
 retrying it, or deliberately run with `/disableScriptDiff 1`.
@@ -217,26 +237,50 @@ Use the new executable directly from the `Modern` directory:
 ScriptManager.exe /csName "MyCsName" /sqlPath "../SQL" /csFile "Config/Database.config" /version "3.5.0.3"
 ```
 
+Before opening a database connection or executing any script, Modern asks for an explicit
+confirmation. Enter `O` (oui) to continue; any other response, including an empty input, cancels
+the launch with exit code `3`.
+
 Development and release livrables use separate Modern entry points:
 
 - `ScriptManager.dev/ConfigVS-ScriptManagerModern.bat` uses the Visual Studio database
   configuration and does not supply `/version`.
-- `ScriptManager.bin/ScriptManagerAgendisModern.bat` supplies the release version through
+- `ScriptManager.bin/ScriptManagerModern.bat` supplies the release version through
   `/version`; the packaging process must replace an empty version placeholder with the actual
   release version.
 
 Existing BAT files and the legacy `2012`, `2014` and `2016` directories remain unchanged and are
 the immediate fallback.
 
-Unlike the legacy 2016 executable, Modern does not compare version labels as strings. When all
-eligible SQL scripts finish successfully, the value supplied through `/version` is written
-unconditionally to the database-level `Version` extended property. This supports both legacy
-labels such as `3.4#56` and four-component labels such as `3.5.0.3`. If any SQL script fails,
-Modern leaves the database version unchanged and returns a non-zero exit code.
+As in the legacy executable, Modern attempts to update the database-level `Version` extended
+property after script execution even if a script failed. Modern deliberately removes the legacy
+`current version < supplied version` condition: when the property already exists, its value is
+updated unconditionally because version labels cannot be ordered reliably by string comparison.
+Version-update errors are logged without changing the process exit code.
 
-Failed scripts remain retryable: Modern records the failed attempt for diagnostics but only treats
-history rows without an error message as completed scripts. A later run therefore retries the
-failed script instead of skipping it and incorrectly advancing the database version.
+Modern preserves the legacy history behavior: once a script name exists in
+`dbo.HistoriqueScriptSql`, it is not run again, whether or not its history row contains an error.
+Failed executions are still recorded for diagnostics and are handled manually when necessary.
+
+The same complete error text is written to the log file and printed immediately in the console,
+directly after the corresponding `RUN SCRIPT` line.
+
+Modern writes its log in UTF-8 to `Logs/ScriptManager-INFO.log`. The active file keeps that fixed
+name; on the first log event after a date change, the previous day's file is rolled to a name such
+as `ScriptManager-INFO.log.20260907`. Each confirmed run starts with two empty log entries followed
+by a separator, then records the resolved connection string before listing scripts:
+
+```text
+2026-09-08 10:27:52,213  INFO -
+2026-09-08 10:27:52,216  INFO -
+2026-09-08 10:27:52,216  INFO - ---------------------------------------------------
+2026-09-08 10:27:52,217  INFO - Using the following connection string:
+2026-09-08 10:27:52,217  INFO - Data Source=(local)\SQL2022;Initial Catalog=MyDatabase;Integrated Security=True
+```
+
+Because the resolved connection string is written in clear text, credentials embedded directly in
+a connection string will also appear in the log. Integrated Security is preferred for deployments
+where log files may be accessible to other users.
 
 Modern requires .NET Framework 4.8 and is intended to connect to SQL Server 2012 and later. Before
 making it the default for a client, validate it against that client's database and deployment
