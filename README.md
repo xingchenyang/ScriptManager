@@ -218,54 +218,54 @@ example `1.2.3.4`.
 SQL files must be UTF-8 encoded. If one file fails, ScriptManager logs the error and continues with
 the remaining files.
 
-# ScriptManagerModern
+# ScriptManagerLite
 
-ScriptManagerModern is the opt-in successor to ScriptManager. It keeps the same differential SQL
+ScriptManagerLite is the lightweight successor to ScriptManager. It keeps the same differential SQL
 execution model and command-line parameters, but is built and delivered independently so the
 existing SQL Server 2012, 2014 and 2016 executables remain available unchanged.
 
-Build `ScriptManagerModern.sln` in the `Release|Any CPU` configuration. The deployable output is
-the complete contents of `ScriptManagerModern/bin/Release/net48`; copy all of it into the
-livrable's `Modern` directory rather than copying only the executable.
+Build `ScriptManagerLite.sln` in the `Release|Any CPU` configuration. The deployable output is
+the complete contents of `ScriptManagerLite/bin/Release/net48`; copy all of it into the
+livrable's `Lite` directory rather than copying only the executable.
 
-The executable remains named `ScriptManager.exe`. The `Modern` directory and the separate BAT
+The executable remains named `ScriptManager.exe`. The `Lite` directory and the separate BAT
 entry point identify the new implementation, while source namespaces remain `ScriptManager`.
 
-Use the new executable directly from the `Modern` directory:
+Use the new executable directly from the `Lite` directory:
 
 ```bat
 ScriptManager.exe /csName "MyCsName" /sqlPath "../SQL" /csFile "Config/Database.config" /version "3.5.0.3"
 ```
 
-Before opening a database connection or executing any script, Modern asks for an explicit
+Before opening a database connection or executing any script, Lite asks for an explicit
 confirmation. Enter `O` (oui) to continue; any other response, including an empty input, cancels
 the launch with exit code `3`.
 
-Development and release livrables use separate Modern entry points:
+Development and release livrables use separate Lite entry points:
 
-- `ScriptManager.dev/ConfigVS-ScriptManagerModern.bat` uses the Visual Studio database
+- `ScriptManager.dev/ConfigVS-ScriptManagerLite.bat` uses the Visual Studio database
   configuration and does not supply `/version`.
-- `ScriptManager.bin/ScriptManagerModern.bat` supplies the release version through
+- `ScriptManager.bin/ScriptManagerLite.bat` supplies the release version through
   `/version`; the packaging process must replace an empty version placeholder with the actual
   release version.
 
 Existing BAT files and the legacy `2012`, `2014` and `2016` directories remain unchanged and are
 the immediate fallback.
 
-As in the legacy executable, Modern attempts to update the database-level `Version` extended
-property after script execution even if a script failed. Modern deliberately removes the legacy
+As in the legacy executable, Lite attempts to update the database-level `Version` extended
+property after script execution even if a script failed. Lite deliberately removes the legacy
 `current version < supplied version` condition: when the property already exists, its value is
 updated unconditionally because version labels cannot be ordered reliably by string comparison.
 Version-update errors are logged without changing the process exit code.
 
-Modern preserves the legacy history behavior: once a script name exists in
+Lite preserves the legacy history behavior: once a script name exists in
 `dbo.HistoriqueScriptSql`, it is not run again, whether or not its history row contains an error.
 Failed executions are still recorded for diagnostics and are handled manually when necessary.
 
 The same complete error text is written to the log file and printed immediately in the console,
 directly after the corresponding `RUN SCRIPT` line.
 
-Modern writes its log in UTF-8 to `Logs/ScriptManager-INFO.log`. The active file keeps that fixed
+Lite writes its log in UTF-8 to `Logs/ScriptManager-INFO.log`. The active file keeps that fixed
 name; on the first log event after a date change, the previous day's file is rolled to a name such
 as `ScriptManager-INFO.log.20260907`. Each confirmed run starts with two empty log entries followed
 by a separator, then records the resolved connection string before listing scripts:
@@ -282,16 +282,16 @@ Because the resolved connection string is written in clear text, credentials emb
 a connection string will also appear in the log. Integrated Security is preferred for deployments
 where log files may be accessible to other users.
 
-Modern requires .NET Framework 4.8 and is intended to connect to SQL Server 2012 and later. Before
+Lite requires .NET Framework 4.8 and is intended to connect to SQL Server 2012 and later. Before
 making it the default for a client, validate it against that client's database and deployment
 environment.
 
-Modern has no dependency on an installed SSMS version. It executes batches with the .NET Framework
+Lite has no dependency on an installed SSMS version. It executes batches with the .NET Framework
 SQL client and handles standalone `GO` separators itself, so it does not ship or load SMO or the
 native BatchParser component. All application dependencies are delivered beside the executable;
 the host machine only needs .NET Framework 4.8.
 
-SQL files do not need to be converted to UTF-8 with BOM. Modern detects UTF-8 with or without a
+SQL files do not need to be converted to UTF-8 with BOM. Lite detects UTF-8 with or without a
 BOM and UTF-16 with a BOM; historical files that are not valid UTF-8 are read as Windows-1252.
 
 # ScriptRunner
