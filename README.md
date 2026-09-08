@@ -198,7 +198,58 @@ example `1.2.3.4`.
 SQL files must be UTF-8 encoded. If one file fails, ScriptManager logs the error and continues with
 the remaining files.
 
- 
+# ScriptManagerModern
+
+ScriptManagerModern is the opt-in successor to ScriptManager. It keeps the same differential SQL
+execution model and command-line parameters, but is built and delivered independently so the
+existing SQL Server 2012, 2014 and 2016 executables remain available unchanged.
+
+Build `ScriptManagerModern.sln` in the `Release|Any CPU` configuration. The deployable output is
+the complete contents of `ScriptManagerModern/bin/Release/net48`; copy all of it into the
+livrable's `Modern` directory rather than copying only the executable.
+
+The executable remains named `ScriptManager.exe`. The `Modern` directory and the separate BAT
+entry point identify the new implementation, while source namespaces remain `ScriptManager`.
+
+Use the new executable directly from the `Modern` directory:
+
+```bat
+ScriptManager.exe /csName "MyCsName" /sqlPath "../SQL" /csFile "Config/Database.config" /version "3.5.0.3"
+```
+
+Development and release livrables use separate Modern entry points:
+
+- `ScriptManager.dev/ConfigVS-ScriptManagerModern.bat` uses the Visual Studio database
+  configuration and does not supply `/version`.
+- `ScriptManager.bin/ScriptManagerAgendisModern.bat` supplies the release version through
+  `/version`; the packaging process must replace an empty version placeholder with the actual
+  release version.
+
+Existing BAT files and the legacy `2012`, `2014` and `2016` directories remain unchanged and are
+the immediate fallback.
+
+Unlike the legacy 2016 executable, Modern does not compare version labels as strings. When all
+eligible SQL scripts finish successfully, the value supplied through `/version` is written
+unconditionally to the database-level `Version` extended property. This supports both legacy
+labels such as `3.4#56` and four-component labels such as `3.5.0.3`. If any SQL script fails,
+Modern leaves the database version unchanged and returns a non-zero exit code.
+
+Failed scripts remain retryable: Modern records the failed attempt for diagnostics but only treats
+history rows without an error message as completed scripts. A later run therefore retries the
+failed script instead of skipping it and incorrectly advancing the database version.
+
+Modern requires .NET Framework 4.8 and is intended to connect to SQL Server 2012 and later. Before
+making it the default for a client, validate it against that client's database and deployment
+environment.
+
+Modern has no dependency on an installed SSMS version. It executes batches with the .NET Framework
+SQL client and handles standalone `GO` separators itself, so it does not ship or load SMO or the
+native BatchParser component. All application dependencies are delivered beside the executable;
+the host machine only needs .NET Framework 4.8.
+
+SQL files do not need to be converted to UTF-8 with BOM. Modern detects UTF-8 with or without a
+BOM and UTF-16 with a BOM; historical files that are not valid UTF-8 are read as Windows-1252.
+
 # ScriptRunner
 
 ScriptRunner is a command-line tool that runs SQL scripts directly on a SQL Server database.
