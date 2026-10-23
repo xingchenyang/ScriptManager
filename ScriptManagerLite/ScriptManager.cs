@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -27,8 +28,9 @@ namespace ScriptManager
             Log.Info(string.Empty);
             Log.Info("---------------------------------------------------");
             string connectionString = ResolveConnectionString();
+            Log.RegisterSecrets(connectionString);
             Log.Info("Using the following connection string: ");
-            Log.Info(connectionString);
+            Log.Info(ConnectionStringRedactor.Redact(connectionString));
             if (!Directory.Exists(options.SqlPath))
                 throw new DirectoryNotFoundException(options.SqlPath);
 
@@ -47,14 +49,26 @@ namespace ScriptManager
             {
                 string error = string.Empty;
                 Log.Info("RUN SCRIPT " + file);
+                string phase = "read-script-file";
+                var totalWatch = Stopwatch.StartNew();
+                var phaseWatch = Stopwatch.StartNew();
                 try
                 {
                     string sql = ReadSqlFile(file);
                     using (var connection = new SqlConnection(connectionString))
                     {
+                        phase = "connection-open";
+                        phaseWatch.Restart();
                         connection.Open();
-                        foreach (string batch in SplitSqlBatches(sql))
+                        phase = "split-batches";
+                        phaseWatch.Restart();
+                        var batches = SplitSqlBatches(sql);
+                        int batchNumber = 0;
+                        foreach (string batch in batches)
                         {
+                            batchNumber++;
+                            phase = "command-execution (batch " + batchNumber + " of " + batches.Count + ")";
+                            phaseWatch.Restart();
                             using (var command = new SqlCommand(batch, connection))
                             {
                                 command.CommandTimeout = 2592000;
@@ -65,6 +79,7 @@ namespace ScriptManager
                 }
                 catch (Exception ex)
                 {
+                    SqlDiagnostics.Annotate(ex, "script-execution", phase, phaseWatch.ElapsedMilliseconds, totalWatch.ElapsedMilliseconds);
                     errors++;
                     error = Log.FormatException(ex);
                     Log.Error("ERROR running script " + file, ex);
@@ -119,7 +134,11 @@ namespace ScriptManager
 
         private IEnumerable<string> FindSqlFiles(string directory)
         {
-            foreach (string file in Directory.GetFiles(directory, "*.sql").OrderBy(path => path))
+            // The "*.sql" search pattern also matches longer extensions such as .sqlbak and .sql_old
+            // on .NET Framework, so the final extension is checked explicitly (as the original does).
+            foreach (string file in Directory.GetFiles(directory, "*.sql")
+                .Where(path => path.EndsWith(".sql", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(path => path))
                 if (IsAllowedForEnvironment(file))
                     yield return Normalize(file);
             foreach (string child in Directory.GetDirectories(directory).OrderBy(path => path))
@@ -285,20 +304,33 @@ namespace ScriptManager
         {
             const string sql = @"IF OBJECT_ID(N'dbo.HistoriqueScriptSql', N'U') IS NULL
 CREATE TABLE dbo.HistoriqueScriptSql(DateExecution DATETIME2, NomScript VARCHAR(500), MessageErreur VARCHAR(MAX));";
-            Execute(connectionString, sql, null);
+            Execute("history-table-check", connectionString, sql, null);
         }
 
         private static HashSet<string> ReadHistory(string connectionString)
         {
             var result = new HashSet<string>(StringComparer.Ordinal);
-            using (var connection = new SqlConnection(connectionString))
-            using (var command = new SqlCommand(
-                "SELECT NomScript FROM " + HistoryTable,
-                connection))
+            string phase = "connection-open";
+            var totalWatch = Stopwatch.StartNew();
+            var phaseWatch = Stopwatch.StartNew();
+            try
             {
-                connection.Open();
-                using (var reader = command.ExecuteReader())
-                    while (reader.Read()) result.Add(Normalize(Convert.ToString(reader[0])));
+                using (var connection = new SqlConnection(connectionString))
+                using (var command = new SqlCommand(
+                    "SELECT NomScript FROM " + HistoryTable,
+                    connection))
+                {
+                    connection.Open();
+                    phase = "command-execution";
+                    phaseWatch.Restart();
+                    using (var reader = command.ExecuteReader())
+                        while (reader.Read()) result.Add(Normalize(Convert.ToString(reader[0])));
+                }
+            }
+            catch (Exception ex)
+            {
+                SqlDiagnostics.Annotate(ex, "history-read", phase, phaseWatch.ElapsedMilliseconds, totalWatch.ElapsedMilliseconds);
+                throw;
             }
             return result;
         }
@@ -307,7 +339,7 @@ CREATE TABLE dbo.HistoriqueScriptSql(DateExecution DATETIME2, NomScript VARCHAR(
         {
             const string sql = @"INSERT INTO dbo.HistoriqueScriptSql(DateExecution, NomScript, MessageErreur)
 VALUES (GETDATE(), @File, @Error);";
-            Execute(connectionString, sql, command =>
+            Execute("history-insert", connectionString, sql, command =>
             {
                 command.Parameters.Add("@File", SqlDbType.VarChar, 500).Value = file;
                 command.Parameters.Add("@Error", SqlDbType.VarChar, -1).Value = error;
@@ -320,19 +352,34 @@ VALUES (GETDATE(), @File, @Error);";
     EXEC sys.sp_addextendedproperty @name=N'Version', @value=@Version;
 ELSE
     EXEC sys.sp_updateextendedproperty @name=N'Version', @value=@Version;";
-            Execute(connectionString, sql, command =>
+            Execute("version-update", connectionString, sql, command =>
                 command.Parameters.Add("@Version", SqlDbType.VarChar, 100).Value = version);
             Log.Info("Version number has been set to " + version);
         }
 
-        private static void Execute(string connectionString, string sql, Action<SqlCommand> configure)
+        private static void Execute(string operation, string connectionString, string sql, Action<SqlCommand> configure)
         {
-            using (var connection = new SqlConnection(connectionString))
-            using (var command = new SqlCommand(sql, connection))
+            string phase = "command-setup";
+            var totalWatch = Stopwatch.StartNew();
+            var phaseWatch = Stopwatch.StartNew();
+            try
             {
-                configure?.Invoke(command);
-                connection.Open();
-                command.ExecuteNonQuery();
+                using (var connection = new SqlConnection(connectionString))
+                using (var command = new SqlCommand(sql, connection))
+                {
+                    configure?.Invoke(command);
+                    phase = "connection-open";
+                    phaseWatch.Restart();
+                    connection.Open();
+                    phase = "command-execution";
+                    phaseWatch.Restart();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                SqlDiagnostics.Annotate(ex, operation, phase, phaseWatch.ElapsedMilliseconds, totalWatch.ElapsedMilliseconds);
+                throw;
             }
         }
     }

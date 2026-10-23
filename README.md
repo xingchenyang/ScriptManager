@@ -278,9 +278,11 @@ by a separator, then records the resolved connection string before listing scrip
 2026-09-08 10:27:52,217  INFO - Data Source=(local)\SQL2022;Initial Catalog=MyDatabase;Integrated Security=True
 ```
 
-Because the resolved connection string is written in clear text, credentials embedded directly in
-a connection string will also appear in the log. Integrated Security is preferred for deployments
-where log files may be accessible to other users.
+SQL user names and passwords (`User ID`, `UID`, `User`, `Password`, `PWD`) are masked as `***` in
+the console and in the log; all other connection options are kept. A connection string that cannot
+be parsed is not printed at all. A failed login message that quotes the user name is masked too.
+Connection and execution failures also log the failure phase, elapsed time and, for SQL Server
+errors, the error number, state, class and client connection identifier.
 
 Lite requires .NET Framework 4.8 and is intended to connect to SQL Server 2012 and later. Before
 making it the default for a client, validate it against that client's database and deployment

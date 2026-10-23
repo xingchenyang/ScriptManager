@@ -75,16 +75,23 @@ namespace ScriptManager
     internal static class Log
     {
         private static readonly log4net.ILog Logger = log4net.LogManager.GetLogger(typeof(Program));
+        private static readonly SecretMasker Masker = new SecretMasker();
+
+        internal static void RegisterSecrets(string connectionString)
+        {
+            Masker.Register(ConnectionStringRedactor.ExtractSecrets(connectionString));
+        }
 
         internal static void Info(string message)
         {
+            message = Masker.Mask(message);
             Logger.Info(message);
             Console.WriteLine(message);
         }
 
         internal static void Error(string message, Exception exception)
         {
-            string output = message + " " + FormatException(exception);
+            string output = Masker.Mask(message + " " + FormatException(exception) + SqlDiagnostics.Describe(exception));
             Logger.Error(output);
             Console.Error.WriteLine(output);
         }
